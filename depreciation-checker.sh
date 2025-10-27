@@ -240,15 +240,16 @@ process_overlays() {
     for overlays_dir in "${overlays_dirs[@]}"; do
         print_verbose_success "🔎 Processing overlays directory for all overlay subfolders: $overlays_dir"
         for env_dir in "$overlays_dir"/*; do
+            set +e
             if [[ -d "$env_dir" ]]; then
                 local result
                 # Use 'set +e' temporarily to prevent script exit on function failure
-                set +e
+                # set +e
                 process_overlay "$env_dir" "$temp_dir"
                 echo "debug 0"
                 result=$?
                 echo "debug 1"
-                set -e
+                # set -e
                 
                 if [[ "$VERBOSE" != "true" && "$SILENT" != "true" ]]; then
                     echo -n "."
@@ -269,7 +270,8 @@ process_overlays() {
                         ;;
                 esac
             fi
-                echo "debug 3"
+            set -e
+            echo "debug 3"
         done
         echo "debug 4"
     done
