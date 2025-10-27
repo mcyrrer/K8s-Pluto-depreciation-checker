@@ -299,6 +299,8 @@ determine_exit_code() {
 
 main() {
     # Parse command line arguments
+    local base_dir="."
+    
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--help)
@@ -315,6 +317,12 @@ main() {
                 ;;
             -k|--k8s-version)
                 if [[ -n "${2:-}" ]]; then
+                    # Validate k8s version format (v1.30.0 or v1.30)
+                    if [[ ! "$2" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+                        print_error "Invalid Kubernetes version format: $2"
+                        print_error "Expected format: v1.30.0 or v1.30"
+                        exit 1
+                    fi
                     k8s_version="$2"
                     shift 2
                 else
@@ -328,7 +336,8 @@ main() {
                 exit 1
                 ;;
             * )
-                break
+                base_dir="$1"
+                shift
                 ;;
         esac
     done
@@ -341,7 +350,7 @@ main() {
     echo ""
     
     # Process overlays
-    process_overlays "$@"
+    process_overlays "$base_dir"
     
     # Determine and use appropriate exit code
     echo ""
@@ -358,7 +367,8 @@ main() {
     fi
     
     determine_exit_code
-    exit $?
+    local exit_code=$?
+    exit $exit_code
 }
 
 # Run main function with all arguments
