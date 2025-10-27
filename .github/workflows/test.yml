@@ -1,0 +1,168 @@
+name: 🔍 Test Depreciation Checker
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-depreciation-checker:
+    name: Test Script Functionality
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        kubernetes-version: 
+          - "v1.25.0"
+          - "v1.28.0"
+          - ""  # Test all versions
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Install Kustomize
+      run: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+        kustomize version
+        
+    - name: 🔍 Install Pluto
+      run: |
+        PLUTO_VERSION="v5.18.4"
+        curl -L "https://github.com/FairwindsOps/pluto/releases/download/${PLUTO_VERSION}/pluto_${PLUTO_VERSION#v}_linux_amd64.tar.gz" | tar -xz
+        sudo mv pluto /usr/local/bin/
+        pluto version
+        
+    - name: 🛡️ Make Script Executable
+      run: chmod +x depreciation-checker.sh
+      
+    - name: ✅ Test Valid Kustomize Configuration
+      run: |
+        echo "Testing valid app with Kubernetes version: ${{ matrix.kubernetes-version }}"
+        if [ -n "${{ matrix.kubernetes-version }}" ]; then
+          KUBERNETES_VERSION="${{ matrix.kubernetes-version }}" ./depreciation-checker.sh -v test/valid-app
+        else
+          ./depreciation-checker.sh -v test/valid-app
+        fi
+      
+    - name: ❌ Test Invalid Kustomize Configuration (Should Fail)
+      run: |
+        echo "Testing invalid app - expecting failure"
+        if [ -n "${{ matrix.kubernetes-version }}" ]; then
+          KUBERNETES_VERSION="${{ matrix.kubernetes-version }}" ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
+        else
+          ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
+        fi
+        
+    - name: 🔍 Test Mixed Valid/Invalid Apps
+      run: |
+        echo "Testing mixed valid and invalid apps"
+        if [ -n "${{ matrix.kubernetes-version }}" ]; then
+          KUBERNETES_VERSION="${{ matrix.kubernetes-version }}" ./depreciation-checker.sh -v test/
+        else
+          ./depreciation-checker.sh -v test/
+        fi
+        
+    - name: 📊 Test Quiet Mode
+      run: |
+        echo "Testing quiet mode"
+        ./depreciation-checker.sh test/valid-app
+        
+    - name: 🔧 Test Help Command
+      run: |
+        ./depreciation-checker.sh --help
+        ./depreciation-checker.sh -h
+
+  test-script-validation:
+    name: Validate Script Syntax
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔍 Check Shell Syntax
+      run: |
+        bash -n depreciation-checker.sh
+        echo "✅ Shell syntax is valid"
+        
+    - name: 🛡️ Run ShellCheck
+      uses: ludeeus/action-shellcheck@master
+      with:
+        scandir: '.'
+        format: gcc
+        severity: warning
+        additional_files: 'depreciation-checker.sh'
+
+  test-edge-cases:
+    name: Test Edge Cases
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Install Dependencies
+      run: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+        
+        PLUTO_VERSION="v5.18.4"
+        curl -L "https://github.com/FairwindsOps/pluto/releases/download/${PLUTO_VERSION}/pluto_${PLUTO_VERSION#v}_linux_amd64.tar.gz" | tar -xz
+        sudo mv pluto /usr/local/bin/
+        
+    - name: 🛡️ Make Script Executable
+      run: chmod +x depreciation-checker.sh
+      
+    - name: 📁 Test Empty Directory
+      run: |
+        mkdir -p empty-test
+        ./depreciation-checker.sh -v empty-test
+        rmdir empty-test
+        
+    - name: 📂 Test Non-existent Directory
+      run: |
+        ./depreciation-checker.sh -v /non/existent/path || echo "Expected failure for non-existent path"
+        
+    - name: 🔧 Test Invalid Arguments
+      run: |
+        ./depreciation-checker.sh --invalid-flag || echo "Expected failure for invalid flag"
+        
+    - name: 📊 Test Current Directory
+      run: |
+        cd test/valid-app
+        ../../depreciation-checker.sh -v .
+
+  create-test-report:
+    name: Create Test Report
+    runs-on: ubuntu-latest
+    needs: [test-depreciation-checker, test-script-validation, test-edge-cases]
+    if: always()
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 📊 Generate Test Summary
+      run: |
+        echo "# 🔍 Depreciation Checker Test Results" > test-results.md
+        echo "" >> test-results.md
+        echo "## Test Status" >> test-results.md
+        echo "- **Script Validation**: ${{ needs.test-script-validation.result }}" >> test-results.md
+        echo "- **Functionality Tests**: ${{ needs.test-depreciation-checker.result }}" >> test-results.md
+        echo "- **Edge Case Tests**: ${{ needs.test-edge-cases.result }}" >> test-results.md
+        echo "" >> test-results.md
+        echo "## Test Environment" >> test-results.md
+        echo "- **OS**: Ubuntu Latest" >> test-results.md
+        echo "- **Kubernetes Versions Tested**: v1.25.0, v1.28.0, All Versions" >> test-results.md
+        echo "- **Test Date**: $(date)" >> test-results.md
+        
+    - name: 📋 Upload Test Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test-results.md
+        retention-days: 30

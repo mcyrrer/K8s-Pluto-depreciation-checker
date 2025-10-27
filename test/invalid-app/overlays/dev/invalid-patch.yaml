@@ -1,0 +1,6 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: non-existent-app  # This doesn't match any base resource
+spec:
+  replicas: 1

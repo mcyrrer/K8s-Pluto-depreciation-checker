@@ -1,0 +1,14 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: deprecated-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: deprecated
+    spec:
+      containers:
+      - name: deprecated
+        image: nginx
