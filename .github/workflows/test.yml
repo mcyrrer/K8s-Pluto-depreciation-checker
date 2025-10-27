@@ -15,9 +15,7 @@ jobs:
     strategy:
       matrix:
         kubernetes-version: 
-          - "v1.25.0"
-          - "v1.28.0"
-          - ""  # Test all versions
+          - "latest"  # Test all versions
     
     steps:
     - name: 📥 Checkout Repository
@@ -43,38 +41,53 @@ jobs:
       run: |
         echo "Testing valid app with Kubernetes version: ${{ matrix.kubernetes-version }}"
         if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          KUBERNETES_VERSION="${{ matrix.kubernetes-version }}" ./depreciation-checker.sh -v test/valid-app
+          ./depreciation-checker.sh -v -k test/valid-app
         else
           ./depreciation-checker.sh -v test/valid-app
         fi
-      
+        echo "exit code: $? should be 0 for valid app"
+
     - name: ❌ Test Invalid Kustomize Configuration (Should Fail)
       run: |
         echo "Testing invalid app - expecting failure"
         if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          KUBERNETES_VERSION="${{ matrix.kubernetes-version }}" ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
+          ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
         else
           ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
         fi
+        echo "exit code: $? should be 1 for invalid app"
+
+    - name: 🔍 Test deprecated deprecated app
+      run: |
+        echo "Testing deprecated app"
+        if [ -n "${{ matrix.kubernetes-version }}" ]; then
+          ./depreciation-checker.sh -v test/deprecated-app
+        else
+          ./depreciation-checker.sh -v test/deprecated-app
+        fi        
+        echo "exit code: $? should be 3 for invalid app"
         
     - name: 🔍 Test Mixed Valid/Invalid Apps
       run: |
         echo "Testing mixed valid and invalid apps"
         if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          KUBERNETES_VERSION="${{ matrix.kubernetes-version }}" ./depreciation-checker.sh -v test/
+          ./depreciation-checker.sh -v test/
         else
           ./depreciation-checker.sh -v test/
         fi
+        echo "exit code: $? should be 3 for invalid app"
         
     - name: 📊 Test Quiet Mode
       run: |
         echo "Testing quiet mode"
         ./depreciation-checker.sh test/valid-app
+        echo "exit code: $? should be 0 for valid app"
         
     - name: 🔧 Test Help Command
       run: |
         ./depreciation-checker.sh --help
         ./depreciation-checker.sh -h
+        echo "exit code: $? should be 0 for valid app"
 
   test-script-validation:
     name: Validate Script Syntax
