@@ -41,7 +41,7 @@ jobs:
       run: |
         echo "Testing valid app with Kubernetes version: ${{ matrix.kubernetes-version }}"
         if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          ./depreciation-checker.sh -v -k test/valid-app
+          ./depreciation-checker.sh -v test/valid-app
         else
           ./depreciation-checker.sh -v test/valid-app
         fi
