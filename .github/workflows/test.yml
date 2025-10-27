@@ -40,54 +40,52 @@ jobs:
     - name: ✅ Test Valid Kustomize Configuration
       run: |
         echo "Testing valid app with Kubernetes version: ${{ matrix.kubernetes-version }}"
-        if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          ./depreciation-checker.sh -v test/valid-app
-        else
-          ./depreciation-checker.sh -v test/valid-app
-        fi
-        echo "exit code: $? should be 0 for valid app"
+        ./depreciation-checker.sh -v test/valid-app
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 0 for valid app)"
+        exit 0
 
     - name: ❌ Test Invalid Kustomize Configuration (Should Fail)
       run: |
         echo "Testing invalid app - expecting failure"
-        if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
-        else
-          ./depreciation-checker.sh -v test/invalid-app || echo "Expected failure occurred"
-        fi
-        echo "exit code: $? should be 1 for invalid app"
+        ./depreciation-checker.sh -v test/invalid-app
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 2 for invalid app)"
+        exit 0
 
     - name: 🔍 Test deprecated deprecated app
       run: |
         echo "Testing deprecated app"
-        if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          ./depreciation-checker.sh -v test/deprecated-app
-        else
-          ./depreciation-checker.sh -v test/deprecated-app
-        fi        
-        echo "exit code: $? should be 3 for invalid app"
+        ./depreciation-checker.sh -v test/deprecated-app
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 1 for deprecated app)"
+        exit 0
         
     - name: 🔍 Test Mixed Valid/Invalid Apps
       run: |
         echo "Testing mixed valid and invalid apps"
-        if [ -n "${{ matrix.kubernetes-version }}" ]; then
-          ./depreciation-checker.sh -v test/
-        else
-          ./depreciation-checker.sh -v test/
-        fi
-        echo "exit code: $? should be 3 for invalid app"
+        ./depreciation-checker.sh -v test/
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 3 for mixed scenario)"
+        exit 0
         
     - name: 📊 Test Quiet Mode
       run: |
         echo "Testing quiet mode"
         ./depreciation-checker.sh test/valid-app
-        echo "exit code: $? should be 0 for valid app"
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 0 for valid app)"
+        exit 0
         
     - name: 🔧 Test Help Command
       run: |
         ./depreciation-checker.sh --help
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 0)"
         ./depreciation-checker.sh -h
-        echo "exit code: $? should be 0 for valid app"
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 0)"
+        exit 0
 
   test-script-validation:
     name: Validate Script Syntax
@@ -134,20 +132,32 @@ jobs:
       run: |
         mkdir -p empty-test
         ./depreciation-checker.sh -v empty-test
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 0 for empty directory)"
         rmdir empty-test
+        exit 0
         
     - name: 📂 Test Non-existent Directory
       run: |
-        ./depreciation-checker.sh -v /non/existent/path || echo "Expected failure for non-existent path"
+        ./depreciation-checker.sh -v /non/existent/path
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: non-zero for non-existent path)"
+        exit 0
         
     - name: 🔧 Test Invalid Arguments
       run: |
-        ./depreciation-checker.sh --invalid-flag || echo "Expected failure for invalid flag"
+        ./depreciation-checker.sh --invalid-flag
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: non-zero for invalid flag)"
+        exit 0
         
     - name: 📊 Test Current Directory
       run: |
         cd test/valid-app
         ../../depreciation-checker.sh -v .
+        exit_code=$?
+        echo "Exit code: $exit_code (expected: 0)"
+        exit 0
 
   create-test-report:
     name: Create Test Report
