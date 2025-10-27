@@ -245,12 +245,16 @@ process_overlays() {
                 # Use 'set +e' temporarily to prevent script exit on function failure
                 set +e
                 process_overlay "$env_dir" "$temp_dir"
+                echo "debug 0"
                 result=$?
+                echo "debug 1"
                 set -e
                 
                 if [[ "$VERBOSE" != "true" && "$SILENT" != "true" ]]; then
                     echo -n "."
                 fi
+                echo "debug 2"
+
                 
                 case $result in
                     0)
@@ -265,7 +269,9 @@ process_overlays() {
                         ;;
                 esac
             fi
+                echo "debug 3"
         done
+        echo "debug 4"
     done
     
     # Summary
